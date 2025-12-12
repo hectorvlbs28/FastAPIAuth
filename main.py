@@ -71,14 +71,37 @@ def access_token(data: dict, time_expire: Union[datetime, None] = None):
     return token_jwt
 
 
+def get_user_current(token: str = Depends(auth2_scheme)):
+    try:
+        token_decode = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = token_decode.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Could not validate credentials",
+                                headers={"WWW-Authenticate": "Bearer"})
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials",
+                            headers={"WWW-Authenticate": "Bearer"})
+    user = get_user(username, fake_users_db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Could not validate credentials",
+                            headers={"WWW-Authenticate": "Bearer"})
+    return user
+
+
+def get_user_disabled_current(user: User = Depends(get_user_current)):
+    if user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return user
+
+
 @app.get("/")
 async def root():
     return "Hello, World!"
 
 
 @app.get("/users/me")
-async def user(token: str = Depends(auth2_scheme)):
-    return token
+async def user(user: User = Depends(get_user_disabled_current)):
+    return user
 
 
 @app.post("/token")
