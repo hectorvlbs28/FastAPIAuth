@@ -1,16 +1,22 @@
-# This is a sample Python script.
+from fastapi import FastAPI, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+app = FastAPI()
 
+auth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+@app.get("/")
+async def root():
+    return "Hello, World!"
 
+@app.get("/users/me")
+async def user(token: str = Depends(auth2_scheme)):
+    print(token)
+    return "I am the current user."
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    return {
+        "access_token": form_data.username,
+        "token_type": "bearer"
+    }
